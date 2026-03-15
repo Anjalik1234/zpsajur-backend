@@ -20,9 +20,10 @@ app.use(
   cors({
     origin: [
       "http://localhost:3000",
-      "https://zpsajur.in",
-      "https://www.zpsajur.in"
+      "https://zp-admin-frontend.vercel.app",
+      "https://zp-sajur-frontend.vercel.app"
     ],
+    credentials: true
   })
 );
 
