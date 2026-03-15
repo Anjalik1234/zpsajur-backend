@@ -21,7 +21,9 @@ app.use(
     origin: [
       "http://localhost:3000",
       "https://zp-admin-frontend.vercel.app",
-      "https://zp-sajur-frontend.vercel.app"
+      "https://zp-sajur-frontend.vercel.app",
+      "https://www.zpsajur.in/",
+      "https://admin.zpsajur.in/",
     ],
     credentials: true
   })
