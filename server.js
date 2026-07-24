@@ -13,6 +13,7 @@ const studentRoutes = require("./routes/studentRoutes");
 const teacherRoutes = require("./routes/teacherRoutes");
 const contributionRoutes = require("./routes/contributionRoutes");
 const qrRoutes = require("./routes/qrRoutes");
+const quizRoutes = require("./routes/quizRoutes");
 
 const app = express();
 
@@ -20,12 +21,13 @@ app.use(
   cors({
     origin: [
       "http://localhost:3000",
+      "http://localhost:3001",   // <-- Add this
       "https://zp-admin-frontend.vercel.app",
       "https://zp-sajur-frontend.vercel.app",
       "https://www.zpsajur.in",
       "https://admin.zpsajur.in",
     ],
-    credentials: true
+    credentials: true,
   })
 );
 
@@ -38,6 +40,7 @@ app.use("/api/teachers", teacherRoutes);
 app.use("/api", visitorRoutes);
 app.use("/api/contributions", contributionRoutes);
 app.use("/api/qr", qrRoutes);
+app.use("/api/quizzes", quizRoutes);
 
 app.get("/", (req, res) => {
   res.send("School admin backend running");
