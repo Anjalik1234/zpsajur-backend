@@ -317,38 +317,6 @@ router.get("/:quizId", verifyToken, async (req, res) => {
 
 });
 
-// View Students
-
-router.get("/students/:quizId", verifyToken, async (req, res) => {
-
-    try {
-
-        const submissions = await QuizSubmission.find({
-
-            quizId: req.params.quizId
-
-        }).sort({
-
-            submittedAt: -1
-
-        });
-
-        res.json(submissions);
-
-    }
-
-    catch (error) {
-
-        res.status(500).json({
-
-            message: error.message
-
-        });
-
-    }
-
-});
-
 // POST /api/quizzes/start ---> Start Quiz for student
 
 router.post("/start", async (req, res) => {
@@ -600,8 +568,9 @@ router.post("/submit", async (req, res) => {
         }
 
         let obtainedMarks = 0;
+        let review = [];
 
-        // Calculate marks
+        // Calculate marks and prepare review
 
         quiz.questions.forEach((question, index) => {
 
@@ -611,13 +580,34 @@ router.post("/submit", async (req, res) => {
 
             );
 
-            if (!studentAnswer) return;
+            const selectedAnswer = studentAnswer
+                ? studentAnswer.selectedAnswer
+                : null;
 
-            if (studentAnswer.selectedAnswer === question.correctAnswer) {
+            const isCorrect =
+                selectedAnswer === question.correctAnswer;
+
+            if (isCorrect) {
 
                 obtainedMarks += quiz.marksPerQuestion;
 
             }
+
+            review.push({
+
+                questionNumber: index + 1,
+
+                question: question.question,
+
+                options: question.options,
+
+                studentAnswer: selectedAnswer,
+
+                correctAnswer: question.correctAnswer,
+
+                isCorrect
+
+            });
 
         });
 
@@ -639,7 +629,9 @@ router.post("/submit", async (req, res) => {
 
             marksObtained: obtainedMarks,
 
-            totalMarks: quiz.totalMarks
+            totalMarks: quiz.totalMarks,
+
+            review
 
         });
 
@@ -708,33 +700,24 @@ router.put("/end/:quizId", verifyToken, async (req, res) => {
         );
 
         // Prepare Ranking Array
-
         let rankingResults = [];
 
         let previousMarks = null;
-
         let currentRank = 0;
 
-        submissions.forEach((student, index) => {
+        submissions.forEach((student) => {
 
+            // If marks changed, increment rank by 1
             if (student.marksObtained !== previousMarks) {
-
-                currentRank = index + 1;
-
+                currentRank++;
                 previousMarks = student.marksObtained;
-
             }
 
             rankingResults.push({
-
                 studentName: student.studentName,
-
                 standard: student.standard,
-
                 marksObtained: student.marksObtained,
-
                 rank: currentRank
-
             });
 
         });
@@ -841,6 +824,133 @@ router.get("/rankings/:quizId", async (req, res) => {
 
         res.status(500).json({
             message: error.message
+        });
+
+    }
+
+});
+
+
+router.put("/republish/:quizId", verifyToken, async (req, res) => {
+
+    try {
+
+        const { quizId } = req.params;
+
+        const quiz = await Quiz.findById(quizId);
+
+        if (!quiz) {
+
+            return res.status(404).json({
+
+                message: "Quiz not found."
+
+            });
+
+        }
+
+        if (quiz.status !== "Ended") {
+
+            return res.status(400).json({
+
+                message: "Only ended quizzes can be republished."
+
+            });
+
+        }
+
+        // Remove previous submissions
+
+        await QuizSubmission.deleteMany({
+
+            quizId
+
+        });
+
+        // Remove previous ranking
+
+        await Ranking.deleteMany({
+
+            quizId
+
+        });
+
+        // Publish again
+
+        quiz.status = "Published";
+
+        quiz.publishDate = new Date();
+
+        await quiz.save();
+
+        res.json({
+
+            message: "Quiz republished successfully."
+
+        });
+
+    }
+
+    catch (error) {
+
+        res.status(500).json({
+
+            message: error.message
+
+        });
+
+    }
+
+});
+
+
+
+// DELETE /api/quizzes/cancel/:submissionId
+
+router.delete("/cancel/:submissionId", async (req, res) => {
+
+    try {
+
+        const submission = await QuizSubmission.findById(req.params.submissionId);
+
+        if (!submission) {
+
+            return res.status(404).json({
+
+                message: "Submission not found."
+
+            });
+
+        }
+
+        // Don't delete if already submitted
+
+        if (submission.isSubmitted) {
+
+            return res.status(400).json({
+
+                message: "Quiz already submitted."
+
+            });
+
+        }
+
+        await QuizSubmission.findByIdAndDelete(req.params.submissionId);
+
+        res.json({
+
+            message: "Quiz cancelled."
+
+        });
+
+    }
+
+    catch (error) {
+
+        res.status(500).json({
+
+            message: error.message
+
         });
 
     }
